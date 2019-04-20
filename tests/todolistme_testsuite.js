@@ -42,6 +42,7 @@ module.exports = {
         });
         browser.assert.containsText(loginStatus, username);
         browser.waitForElementNotVisible(syncPanel);
+        browser.pause(1000);
     },
 
     'Go to TodoList.me'(browser) {
@@ -60,6 +61,6 @@ module.exports = {
             .setValue(newListNameField, listName)
             .click(newListSaveButton);
         ;
-        browser.pause(1000);
+        browser.pause();
     }
 }
