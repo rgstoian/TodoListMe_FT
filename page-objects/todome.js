@@ -7,6 +7,8 @@ const $ = jQuery = require('jquery')(window);
 
 const repo = require('../page-objects/element-repo.js');
 
+
+
 var todomeCommands = {
     performLogin: function () {
         //perform a login to log test case results on ToDoMeList's server
@@ -64,6 +66,7 @@ var todomeCommands = {
         //create the list, assert its existence then switch to it
         //the are some extra clicks on a blank list then on the current list for consistency
         this.api
+            .waitForElementVisible(repo.newListButton)
             .click(repo.newListButton)
             .setValue(repo.newListNameField, listName)
             .click(repo.newListSaveButton)
@@ -81,6 +84,7 @@ var todomeCommands = {
         let noOfItems = 0;
         let min = 2;
         let max = 10;
+        let addedItems = [];
 
         if (minItems !== undefined && maxItems === undefined) {
             noOfItems = minItems;
@@ -90,6 +94,7 @@ var todomeCommands = {
                 max = maxItems;
             }
             noOfItems = Math.floor(Math.random() * (max - min) + min);
+            // noOfItems = getRandomNumber(min, max);
         }
 
         let alreadyDoneIDs = [];
@@ -100,23 +105,24 @@ var todomeCommands = {
             //it should like like "Boring Task #50283" with random numbers
             let listItem = 'Boring Task #' + Math.random().toString().slice(2, 7);
 
-            if (useBoringTaskNames === false || useBoringTaskNames === undefined) {
+            if (useBoringTaskNames === false || useBoringTaskNames == undefined) {
 
                 let currentID;
                 // get a non-boring task from a Truth or Dare generator via REST API
                 // the result is in JSON format, so I'll extract just the text
                 do {
                     $.ajax({
-                        url: 'https://truthordare-game.com/api/dare/15',
+                        url: 'http://truthordare-game.com/api/dare/15',
                         dataType: 'json',
                         async: false,
                         success: function (data) {
                             currentID = data.id;
                             listItem = data.text;
-                        }
+                        },
+                        error: function(){console.error('cannot access api')}
                     });
                     //check if the "task" has already been used this test run
-                } while (alreadyDoneIDs.indexOf(currentID) > -1);
+                } while (currentID!==undefined && alreadyDoneIDs.indexOf(currentID) > -1);
                 alreadyDoneIDs.push(currentID);
             }
 
@@ -127,6 +133,8 @@ var todomeCommands = {
             this.api
                 .waitForElementVisible(repo.mostRecentTask)
                 .assert.containsText(repo.mostRecentTask + '//span', listItem);
+
+            addedItems.push(listItem);
         }
 
         //let's also check that we've added the correct number of items
@@ -134,31 +142,41 @@ var todomeCommands = {
         browser.elements('xpath', repo.allToDoTasks, function (result) {
             browser.assert.equal(result.value.length, noOfItems);
         });
+        return addedItems;
     },
 
 
+    markAsDone: function (existingItems, howMany) {
+        let totalItems = 0;
+        let browser = this.api;
+        let howManyItems = 0;
 
-    // markAsDone: function (howMany) {
-    //     let totalItems=0;
-    //     let howManyItems = 0;
-    //     if (howMany===undefined) {
-    //         howManyItems = 0;
-    //     }
-    //     else howManyItems = howMany;
-    //     let browser = this.api;
-    //     browser.elements('xpath', repo.allToDoTasks, function (result) {
-    //         totalItems= result.value.length;
-    //
-    //         console.log(browser.getAttributeByName(result.value[0], 'innertext'));
-    //         while (howManyItems===0||howManyItems>totalItems){
-    //             howManyItems = Math.floor(Math.random()*10);
-    //         };
-    //         let liIDArray=[];
-    //         for (let i =0; i<howManyItems;i++){
-    //             liIDArray.push(i);
-    //         }
-    //     });
-    // }
+        if (existingItems == undefined || Array.isArray(existingItems) == false) {
+            browser.assert.fail('Parameter "existingItems" is mandatory');
+        }
+
+        //set the number of items
+
+        //if the parameter is not set, or invalid, mark a random number of items off the list
+        if (howMany == undefined || howMany < 1 || howMany > existingItems.length) {
+
+            howManyItems = Math.floor(Math.random() * (existingItems.length - howMany) + howMany);
+        } else howManyItems = howMany;
+
+        browser.elements('xpath', repo.allToDoTasks, function (result) {
+            totalItems = result.value.length;
+
+            console.log(browser.getAttributeByName(result.value[0], 'innertext'));
+            while (howManyItems === 0 || howManyItems > totalItems) {
+                howManyItems = Math.floor(Math.random() * 10);
+            }
+            ;
+            let liIDArray = [];
+            for (let i = 0; i < howManyItems; i++) {
+                liIDArray.push(i);
+            }
+        });
+    }
 
 };
 module.exports = {

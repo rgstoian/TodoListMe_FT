@@ -33,32 +33,33 @@ module.exports = {
     },
 
     'Add single to do list item'(browser) {
-        // browser.page.todome().createNewListItem(1);
+        browser.page.todome().createNewListItem(1);
     },
 
     'Add multiple to do list items'(browser) {
         //since no number of list items was specified, let's do a random number of items
         //every time we run the test
 
-        // browser.page.todome().createNewListItem();
-    },
-
-    'Mark a todo list item as done'(browser) {
-
-        browser.page.todome().createNewListItem(5, undefined, true);
-
-        let howManyItems = 0;
-        const numElementsPromise = new Promise(resolve => {
-            browser.elements('xpath', repo.allToDoTasks, result => {
-                resolve(result.value.length);
-            });
-        });
-
-        numElementsPromise.then(numElements => {
-            howManyItems = numElements;
-        });
-
-        console.log(howManyItems);
-
+         browser.page.todome().createNewListItem();
     }
+    // ,
+    //
+    // 'Mark a todo list item as done'(browser) {
+    //
+    //     let addedItems = browser.page.todome().createNewListItem(5, undefined, true);
+    //
+    //     let howManyItems = 0;
+    //     const numElementsPromise = new Promise(resolve => {
+    //         browser.elements('xpath', repo.allToDoTasks, result => {
+    //             resolve(result.value.length);
+    //         });
+    //     });
+    //
+    //     numElementsPromise.then(numElements => {
+    //         howManyItems = numElements;
+    //     });
+    //
+    //     console.log(howManyItems);
+    //
+    // }
 }
