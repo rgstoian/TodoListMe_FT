@@ -24,11 +24,20 @@ var todomeCommands = {
             .click(repo.syncButton)
         ;
 
+        //check if the user has been logged in via a label that shows the currently logged user
+        //then wait for the sync panel to close so it won't interfere with other tests
+        //an additional wait is added due to the panel being animated
+        this
+            .api
+            .assert.containsText(repo.loginStatus, repo.username)
+            .click(repo.closeSyncPanelButton)
+            .waitForElementNotVisible(repo.syncPanel);
+
         //the website pops up a few options if the local todolist differs from
         //the one that's synced to the account, so we optionally wait for it to pop up
         this
             .api
-            .waitForElementVisible(repo.syncWithServerButton, 1000, false);
+            .waitForElementVisible(repo.syncWithServerButton, 10000, false);
 
         //then if it exists click on the button that favors the synced content to the local one
         this
@@ -39,14 +48,8 @@ var todomeCommands = {
                 }
             });
 
-        //check if the user has been logged in via a label that shows the currently logged user
-        //then wait for the sync panel to close so it won't interfere with other tests
-        //an additional wait is added due to the panel being animated
-        this
-            .api
-            .assert.containsText(repo.loginStatus, repo.username)
-            .waitForElementNotVisible(repo.syncPanel)
-            .pause(1000);
+        //we use the Blank list associated with the account to check if data was loaded properly
+        this.api.waitForElementVisible(repo.blankListButton);
     },
     createNewList: function (testCaseNumber) {
         //creates a new list for each testcase for further reference, format is
@@ -152,7 +155,7 @@ var todomeCommands = {
         let howManyItems = 0;
 
         if (existingItems == undefined || Array.isArray(existingItems) == false) {
-            browser.assert.fail('Parameter "existingItems" is mandatory');
+            browser.assert.fail('Parameter existingItems is mandatory');
         }
 
         //set the number of items

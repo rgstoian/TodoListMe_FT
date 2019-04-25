@@ -11,6 +11,8 @@ module.exports= {
     usernameField: '//input[@id=\'syncname\']',
     passwordField: '//input[@id=\'syncpassword\']',
     syncButton: '//input[@id=\'syncbutton\']',
+    closeSyncPanelButton: '//div[@id=\'syncformup\']/a[.=\'Close panel\']',
+
     //endregion
 
     newListButton: '//img[@id=\'addlist\']',
@@ -24,6 +26,7 @@ module.exports= {
     newTaskField: '//input[@id=\'newtodo\']',
     mostRecentTask:'//ul[@id=\'mytodos\']//li[last()]',
     allToDoTasks: '//ul[@id=\'mytodos\']//li',
+
 
     currentDateTime: new Date().toISOString()
 
