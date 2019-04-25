@@ -1,21 +1,20 @@
-const jsdom = require('jsdom');
-const {JSDOM} = jsdom;
-const {window} = new JSDOM();
-const {document} = (new JSDOM('')).window;
-global.document = document;
-const $ = jQuery = require('jquery')(window);
-
 const repo = require('../page-objects/element-repo.js');
+var request = require('sync-request');
 
-
+function getRandomNumber(min, max) {
+    let result = Math.floor(Math.random() * (max - min) + min);
+    return result;
+}
 
 var todomeCommands = {
     performLogin: function () {
         //perform a login to log test case results on ToDoMeList's server
 
         //open the sync panel and login
-        this
-            .api
+
+        let browser = this.api;
+
+        browser
             .waitForElementVisible(repo.syncPanelButton)
             .click(repo.syncPanelButton)
             .waitForElementVisible(repo.syncPanel)
@@ -27,21 +26,19 @@ var todomeCommands = {
         //check if the user has been logged in via a label that shows the currently logged user
         //then wait for the sync panel to close so it won't interfere with other tests
         //an additional wait is added due to the panel being animated
-        this
-            .api
+        browser
             .assert.containsText(repo.loginStatus, repo.username)
-            .click(repo.closeSyncPanelButton)
-            .waitForElementNotVisible(repo.syncPanel);
+        // .waitForElementVisible(repo.closeSyncPanelButton)
+        // .click(repo.closeSyncPanelButton)
+        // .waitForElementNotVisible(repo.syncPanel);
 
         //the website pops up a few options if the local todolist differs from
         //the one that's synced to the account, so we optionally wait for it to pop up
-        this
-            .api
+        browser
             .waitForElementVisible(repo.syncWithServerButton, 10000, false);
 
         //then if it exists click on the button that favors the synced content to the local one
-        this
-            .api
+        browser
             .element('xpath', repo.syncWithServerButton, function (visible) {
                 if (visible.status === 0) {
                     this.click(repo.syncWithServerButton);
@@ -49,7 +46,9 @@ var todomeCommands = {
             });
 
         //we use the Blank list associated with the account to check if data was loaded properly
-        this.api.waitForElementVisible(repo.blankListButton);
+        browser
+            .waitForElementNotVisible(repo.syncPanel)
+            .waitForElementVisible(repo.blankListButton);
     },
     createNewList: function (testCaseNumber) {
         //creates a new list for each testcase for further reference, format is
@@ -62,8 +61,8 @@ var todomeCommands = {
         //create an xpath selector based on the list name
         // and insert it into the blank template from the repo
 
-        repo.currentListButton = repo.currentListButton.substr(0, 35)
-            + repo.currentDateTime
+        let currentList = repo.currentListButton.substr(0, 35)
+            + listName
             + repo.currentListButton.substr(35);
 
         //create the list, assert its existence then switch to it
@@ -73,9 +72,9 @@ var todomeCommands = {
             .click(repo.newListButton)
             .setValue(repo.newListNameField, listName)
             .click(repo.newListSaveButton)
-            .waitForElementVisible(repo.currentListButton)
+            .waitForElementVisible(currentList)
             .click(repo.blankListButton)
-            .click(repo.currentListButton)
+            .click(currentList)
         ;
     },
     createNewListItem: function (minItems, maxItems, useBoringTaskNames) {
@@ -96,8 +95,7 @@ var todomeCommands = {
                 min = minItems;
                 max = maxItems;
             }
-            noOfItems = Math.floor(Math.random() * (max - min) + min);
-            // noOfItems = getRandomNumber(min, max);
+            noOfItems = getRandomNumber(min, max);
         }
 
         let alreadyDoneIDs = [];
@@ -114,18 +112,14 @@ var todomeCommands = {
                 // get a non-boring task from a Truth or Dare generator via REST API
                 // the result is in JSON format, so I'll extract just the text
                 do {
-                    $.ajax({
-                        url: 'http://truthordare-game.com/api/dare/15',
-                        dataType: 'json',
-                        async: false,
-                        success: function (data) {
-                            currentID = data.id;
-                            listItem = data.text;
-                        },
-                        error: function(){console.error('cannot access api')}
-                    });
+
+                    let response = request('GET', 'https://truthordare-game.com/api/dare/15');
+                    let json = JSON.parse(response.getBody());
+                    currentID = json.id;
+                    listItem = json.text;
+
                     //check if the "task" has already been used this test run
-                } while (currentID!==undefined && alreadyDoneIDs.indexOf(currentID) > -1);
+                } while (currentID !== undefined && alreadyDoneIDs.indexOf(currentID) > -1);
                 alreadyDoneIDs.push(currentID);
             }
 
@@ -146,7 +140,8 @@ var todomeCommands = {
             browser.assert.equal(result.value.length, noOfItems);
         });
         return addedItems;
-    },
+    }
+    ,
 
 
     markAsDone: function (existingItems, howMany) {
@@ -162,23 +157,14 @@ var todomeCommands = {
 
         //if the parameter is not set, or invalid, mark a random number of items off the list
         if (howMany == undefined || howMany < 1 || howMany > existingItems.length) {
-
-            howManyItems = Math.floor(Math.random() * (existingItems.length - howMany) + howMany);
+            howManyItems = getRandomNumber(howMany, length);
         } else howManyItems = howMany;
 
-        browser.elements('xpath', repo.allToDoTasks, function (result) {
-            totalItems = result.value.length;
+        for (let i =0; i<howManyItems; i++){
 
-            console.log(browser.getAttributeByName(result.value[0], 'innertext'));
-            while (howManyItems === 0 || howManyItems > totalItems) {
-                howManyItems = Math.floor(Math.random() * 10);
-            }
-            ;
-            let liIDArray = [];
-            for (let i = 0; i < howManyItems; i++) {
-                liIDArray.push(i);
-            }
-        });
+            //get a random item to mark as done
+        }
+
     }
 
 };

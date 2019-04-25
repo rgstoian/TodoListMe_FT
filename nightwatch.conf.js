@@ -1,5 +1,4 @@
 const chromedriver = require('chromedriver');
-const geckodriver = require('geckodriver');
 
 module.exports = {
     src_folders : ["tests"],
@@ -21,28 +20,6 @@ module.exports = {
                     args: ['headless','window-size=1920,3160', 'disable-gpu']
                     // args: ['disable-gpu']
                 }
-            }
-        },
-        chrome: {
-            webdriver: {
-                server_path: chromedriver.path
-            },
-            desiredCapabilities: {
-                browserName: 'chrome',
-                javascriptEnabled: true,
-                acceptSslCerts: true,
-                chromeOptions: {
-                    args: ['disable-gpu']
-                }
-            }
-        },
-        firefox: {
-            webdriver: {
-                server_path: geckodriver.path
-            },
-            desiredCapabilities: {
-                browserName: 'firefox',
-                marionette: true
             }
         }
     }
