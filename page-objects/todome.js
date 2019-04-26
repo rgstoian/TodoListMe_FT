@@ -145,9 +145,8 @@ var todomeCommands = {
 
 
     markAsDone: function (existingItems, howMany) {
-        let totalItems = 0;
         let browser = this.api;
-        let howManyItems = 0;
+        let howManyItems;
 
         if (existingItems == undefined || Array.isArray(existingItems) == false) {
             browser.assert.fail('Parameter existingItems is mandatory');
@@ -157,14 +156,67 @@ var todomeCommands = {
 
         //if the parameter is not set, or invalid, mark a random number of items off the list
         if (howMany == undefined || howMany < 1 || howMany > existingItems.length) {
-            howManyItems = getRandomNumber(howMany, length);
+            howManyItems = getRandomNumber(1, existingItems.length);
         } else howManyItems = howMany;
 
-        for (let i =0; i<howManyItems; i++){
-
+        for (let i = 0; i < howManyItems; i++) {
             //get a random item to mark as done
+            let chosenIndex = getRandomNumber(0, existingItems.length);
+
+            let itemText = existingItems[chosenIndex];
+            existingItems.splice(chosenIndex, 1);
+
+            let itemToSelect = repo.toDoListItemByName.substr(0, 53)
+                + itemText
+                + repo.toDoListItemByName.substr(53);
+
+            let expectedMarkedItem = repo.doneListItemByName.substr(0, 57)
+                + itemText
+                + repo.doneListItemByName.substr(57);
+
+            browser.assert.elementPresent(itemToSelect, 'Item found');
+            browser.click(itemToSelect + '//input[@type=\'checkbox\']');
+            browser.waitForElementNotPresent(itemToSelect);
+
+            browser.waitForElementVisible(expectedMarkedItem, abortOnFailure = false);
+            browser.assert.elementPresent(expectedMarkedItem);
+
         }
 
+    },
+
+    validateProgressBar: function () {
+        let browser = this.api;
+        let toDoItems = 0;
+        let doneItems = 0;
+
+        browser
+            .elements('xpath', repo.allToDoTasks, function (todoElements) {
+                toDoItems = todoElements.value.length;
+            })
+            .perform(function () {
+                browser.elements('xpath', repo.allDoneTasks, function (doneElements) {
+                    doneItems = doneElements.value.length;
+                })
+            })
+            .perform(function () {
+                //Math.ceil((100*3)/9)
+
+                //the property below is not used because the return value is absolute in pixels instead of relative
+                // browser.getCssProperty(repo.doneProgressBar, 'width', function (result) {
+                browser.getAttribute(repo.doneProgressBar, 'style', function (result) {
+                    let str = result.value;
+
+                    //format width of progressbar as a number
+                    let progressBarWidth = parseInt(str.substring(str.lastIndexOf(': ')+2, str.lastIndexOf('%')));
+
+                    //get a percentage of done items out of total items; site uses a ceiling value for actual width
+                    let expectedProgressBarWidth = Math.round((100*doneItems)/(doneItems+toDoItems));
+
+                    browser.assert.equal(progressBarWidth, expectedProgressBarWidth);
+
+                })
+            });
     }
 
 };

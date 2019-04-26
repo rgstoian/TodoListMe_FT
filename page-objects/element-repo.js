@@ -1,5 +1,4 @@
 module.exports= {
-    slogan: '//span[@id=\'slogan\']',
 
     //region loginElements
     syncWithServerButton: '//button[contains(text(), \'Overwrite lists\')]',
@@ -12,7 +11,6 @@ module.exports= {
     passwordField: '//input[@id=\'syncpassword\']',
     syncButton: '//input[@id=\'syncbutton\']',
     closeSyncPanelButton: '//div[@id=\'syncformup\']/a[.=\'Close panel\']',
-
     //endregion
 
     newListButton: '//img[@id=\'addlist\']',
@@ -26,6 +24,10 @@ module.exports= {
     newTaskField: '//input[@id=\'newtodo\']',
     mostRecentTask:'//ul[@id=\'mytodos\']//li[last()]',
     allToDoTasks: '//ul[@id=\'mytodos\']//li',
+    allDoneTasks: '//ul[@id=\'mydonetodos\']//li',
+    toDoListItemByName: '//ul[@id=\'mytodos\']//li[child::span[contains(text(),\'\')]]',
+    doneListItemByName: '//ul[@id=\'mydonetodos\']//li[child::span[contains(text(),\'\')]]',
+    doneProgressBar:'//div[@id=\'doneprogress\']',
 
 
     currentDateTime: new Date().toISOString()
