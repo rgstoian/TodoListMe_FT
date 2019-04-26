@@ -1,23 +1,30 @@
 const repo = require('../page-objects/element-repo.js');
 var request = require('sync-request');
 
+//function to get a random number between two integers, where min<=result<max
 function getRandomNumber(min, max) {
     let result = Math.floor(Math.random() * (max - min) + min);
     return result;
 }
 
 var todomeCommands = {
-    performLogin: function () {
-        //perform a login to log test case results on ToDoMeList's server
 
-        //open the sync panel and login
+    //perform a login to log test case results on ToDoMeList's server
+    performLogin: function () {
 
         let browser = this.api;
 
+        //due to an animation playing when opening/closing the sync panel
+        //we create two elements for the open panel and the closed panel
+
+        let syncPanelOpen = repo.syncPanel.replace(']', ' and @style=\'display: block;\']');
+        let syncPanelClosed = repo.syncPanel.replace(']', ' and @style=\'display: none;\']');
+
+        //open the sync panel and login
         browser
             .waitForElementVisible(repo.syncPanelButton)
             .click(repo.syncPanelButton)
-            .waitForElementVisible(repo.syncPanel)
+            .waitForElementVisible(syncPanelOpen)
             .setValue(repo.usernameField, repo.username)
             .setValue(repo.passwordField, repo.password)
             .click(repo.syncButton)
@@ -28,22 +35,31 @@ var todomeCommands = {
         //an additional wait is added due to the panel being animated
         browser
             .assert.containsText(repo.loginStatus, repo.username)
-        // .waitForElementVisible(repo.closeSyncPanelButton)
-        // .click(repo.closeSyncPanelButton)
-        // .waitForElementNotVisible(repo.syncPanel);
 
         //the website pops up a few options if the local todolist differs from
         //the one that's synced to the account, so we optionally wait for it to pop up
         browser
-            .waitForElementVisible(repo.syncWithServerButton, 10000, false);
+            .waitForElementVisible(repo.syncWithServerButton, 10000, false)
 
         //then if it exists click on the button that favors the synced content to the local one
         browser
-            .element('xpath', repo.syncWithServerButton, function (visible) {
-                if (visible.status === 0) {
-                    this.click(repo.syncWithServerButton);
+            .element('xpath', repo.syncWithServerButton, function (elem) {
+                if (elem.status === 0) {
+                    browser.click(repo.syncWithServerButton);
                 }
             });
+
+        //we do the same for the sync panel close button, in case it remains open
+        //(it is normally closed by clicking the 'get lists from account' button
+
+        browser
+            .waitForElementPresent(syncPanelClosed, abortOnFailure=false);
+
+        browser.getCssProperty(repo.syncPanel, 'display', function (elem) {
+            if (elem.value == 'block'){
+                browser.click(repo.closeSyncPanelButton);
+            }
+        });
 
         //we use the Blank list associated with the account to check if data was loaded properly
         browser
@@ -110,7 +126,9 @@ var todomeCommands = {
 
                 let currentID;
                 // get a non-boring task from a Truth or Dare generator via REST API
-                // the result is in JSON format, so I'll extract just the text
+                // the result is in JSON format
+                //the id property is used to ensure no duplicate entries
+                //the text value is used for the to-do task itself
                 do {
 
                     let response = request('GET', 'https://truthordare-game.com/api/dare/15');
@@ -137,22 +155,23 @@ var todomeCommands = {
         //let's also check that we've added the correct number of items
         let browser = this.api;
         browser.elements('xpath', repo.allToDoTasks, function (result) {
-            browser.assert.equal(result.value.length, noOfItems);
+            browser.assert.equal(result.value.length, noOfItems,
+                'Expected '+noOfItems+' items to be added, actual '+result.value.length+'.');
         });
+
+        //return an array of the created items
         return addedItems;
-    }
-    ,
+    },
 
 
     markAsDone: function (existingItems, howMany) {
         let browser = this.api;
         let howManyItems;
 
+        //the method needs the already existing to-do items mak
         if (existingItems == undefined || Array.isArray(existingItems) == false) {
             browser.assert.fail('Parameter existingItems is mandatory');
         }
-
-        //set the number of items
 
         //if the parameter is not set, or invalid, mark a random number of items off the list
         if (howMany == undefined || howMany < 1 || howMany > existingItems.length) {
@@ -163,57 +182,73 @@ var todomeCommands = {
             //get a random item to mark as done
             let chosenIndex = getRandomNumber(0, existingItems.length);
 
+            //choose and remove an item from the to-do array
             let itemText = existingItems[chosenIndex];
             existingItems.splice(chosenIndex, 1);
 
+            //set its path
             let itemToSelect = repo.toDoListItemByName.substr(0, 53)
                 + itemText
                 + repo.toDoListItemByName.substr(53);
 
+            //set the path of the expected item when it's sent to the done category
             let expectedMarkedItem = repo.doneListItemByName.substr(0, 57)
                 + itemText
                 + repo.doneListItemByName.substr(57);
 
-            browser.assert.elementPresent(itemToSelect, 'Item found');
+            //click the checkbox of the item and wait for it to disappear from the to-do list
             browser.click(itemToSelect + '//input[@type=\'checkbox\']');
             browser.waitForElementNotPresent(itemToSelect);
 
+            //wait for the item to be marked as done; abortOnFailure is false because we assert its creation below
             browser.waitForElementVisible(expectedMarkedItem, abortOnFailure = false);
             browser.assert.elementPresent(expectedMarkedItem);
-
         }
+
+        //assert the number of the checked items
+        browser.elements('xpath', repo.allDoneTasks, function (result) {
+            browser.assert.equal(result.value.length, howManyItems,
+                'Expected '+howManyItems+' items to be marked as done, actual '+result.value.length+'.');
+        });
 
     },
 
     validateProgressBar: function () {
         let browser = this.api;
-        let toDoItems = 0;
-        let doneItems = 0;
+        let toDoItems;
+        let doneItems;
 
         browser
+        //get the number of the to-do items
             .elements('xpath', repo.allToDoTasks, function (todoElements) {
                 toDoItems = todoElements.value.length;
             })
             .perform(function () {
+                //get the number of the done items
                 browser.elements('xpath', repo.allDoneTasks, function (doneElements) {
                     doneItems = doneElements.value.length;
                 })
             })
             .perform(function () {
-                //Math.ceil((100*3)/9)
 
                 //the property below is not used because the return value is absolute in pixels instead of relative
                 // browser.getCssProperty(repo.doneProgressBar, 'width', function (result) {
+
+                //the length of the bar is dictated by its width attribute, in percentage
                 browser.getAttribute(repo.doneProgressBar, 'style', function (result) {
                     let str = result.value;
 
                     //format width of progressbar as a number
-                    let progressBarWidth = parseInt(str.substring(str.lastIndexOf(': ')+2, str.lastIndexOf('%')));
+                    let progressBarWidth = parseInt(str.substring(str.lastIndexOf(': ') + 2, str.lastIndexOf('%')));
 
-                    //get a percentage of done items out of total items; site uses a ceiling value for actual width
-                    let expectedProgressBarWidth = Math.round((100*doneItems)/(doneItems+toDoItems));
+                    //get a percentage of done items out of total items and round to integer
+                    let expectedProgressBarWidth = Math.round((100 * doneItems) / (doneItems + toDoItems));
 
-                    browser.assert.equal(progressBarWidth, expectedProgressBarWidth);
+                    //assert the length of the done bar
+                    browser.assert.equal(
+                        progressBarWidth,
+                        expectedProgressBarWidth,
+                        'Expected progress bar to be at '+expectedProgressBarWidth+'%, actual '+progressBarWidth+'%.');
 
                 })
             });
